@@ -1,10 +1,11 @@
 import { db } from "../database/database.js"
 
-//POST Games
 export async function createGames(req, res) {
   const { name, image, stockTotal, pricePerDay } = req.body
 
   try {
+
+    if(!name || stockTotal <= 0 || pricePerDay <= 0) return res.sendStatus(400)
 
     const nameExist = await db.query(`SELECT * FROM games WHERE name= $1; `, [name])
 
@@ -20,13 +21,11 @@ export async function createGames(req, res) {
     res.status(500).send(error.message)
 
   }
-
 }
 
 
-//GET GAMES
-export async function findGames(req, res) {
 
+export async function findGames(req, res) {
 
   try {
     const games = await db.query("SELECT * FROM games")
@@ -36,5 +35,4 @@ export async function findGames(req, res) {
   } catch (error) {
     res.status(500).send(error.message)
   }
-
 }

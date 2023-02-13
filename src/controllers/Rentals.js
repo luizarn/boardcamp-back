@@ -68,7 +68,7 @@ export async function createRental(req, res) {
 
         const gameAvailable = await db.query(`SELECT * FROM rentals WHERE "gameId"=${gameId}`)
 
-        if (gameIdExist.rows[0].stockTotal <= gameAvailable) res.status(400).send("não há quantidade disponível para aluguél")
+        if (gameIdExist.rows[0].stockTotal <= gameAvailable.rows.length) res.status(400).send("não há quantidade disponível para aluguél")
 
         let originalPrice = daysRented * gameIdExist.rows[0].pricePerDay
 
@@ -100,15 +100,17 @@ export async function finalizeRental(req, res) {
 
         if (rentalId.rows[0].returnDate !== null) res.status(400).send("aluguel já foi finalizado anteriormente")
 
-        let difference = rentalId.rows[0].rentDate.getTime() - returnDateObj.getTime()
+        await db.query(`UPDATE rentals set "returnDate"=$1 WHERE id= $2`, [returnDate, id])
+
+        let difference = returnDateObj.getTime() - (rentalId.rows[0].rentDate.getTime())
    
         const price = await db.query(`SELECT * FROM games WHERE id=${rentalId.rows[0].gameId}`)
   
         const realPrice = (price.rows[0].pricePerDay)/100
 
-        let delayFee = (Math.ceil(difference / (1000 * 3600 * 24))) * realPrice
+        let delayFee = ((Math.ceil(difference / (1000 * 3600 * 24))) - rentalId.rows[0].daysRented) * realPrice
 
-        await db.query(`UPDATE rentals set "returnDate"=$1, "delayFee"=$2 WHERE id= $3`, [returnDate, delayFee, id])
+        await db.query(`UPDATE rentals set "delayFee"=$1 WHERE id= $2`, [ delayFee, id])
 
         res.status(200).send("Aluguél finalizado")
     } catch (error) {

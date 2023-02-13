@@ -2,7 +2,7 @@ import { db } from "../database/database.js"
 import dayjs from "dayjs";
 
 
-// GET/customers Listar clientes
+
 
 export async function findRentals(req, res) {
 
@@ -51,10 +51,10 @@ export async function findRentals(req, res) {
 }
 
 
-//POST /customers Inserir um cliente
+
 export async function createRental(req, res) {
     const { customerId, gameId, daysRented } = req.body
-    let rentDate = dayjs().format("YYYY-MM-DD")
+    let rentDate = dayjs().format()
 
     try {
 
@@ -66,15 +66,17 @@ export async function createRental(req, res) {
 
         if (gameIdExist.rows.length === 0) return res.status(400).send("não existe nenhum cliente com esse ID")
 
-        if (gameIdExist.rows[0].stockTotal < daysRented) res.status(400).send("não há quantidade disponível para aluguél")
+        const gameAvailable = await db.query(`SELECT * FROM rentals WHERE "gameId"=${gameId}`)
 
+        if (gameIdExist.rows[0].stockTotal <= gameAvailable) res.status(400).send("não há quantidade disponível para aluguél")
 
         let originalPrice = daysRented * gameIdExist.rows[0].pricePerDay
 
         await db.query(`INSERT INTO rentals (
             "customerId", "gameId", "rentDate", "daysRented", "returnDate", "originalPrice", "delayFee") 
             values ($1, $2, $3, $4, $5, $6, $7);`, [customerId, gameId, rentDate, daysRented, null, originalPrice, null])
-        res.status(201).send("Aluguél adicionado com sucesso")
+
+        res.sendStatus(201)
     } catch (error) {
 
         res.status(500).send(error.message)

@@ -82,7 +82,7 @@ export async function createRental(req, res) {
 
 export async function finalizeRental(req, res) {
 
-    let returnDate = dayjs().format("YYYY-MM-DD")
+    const returnDate = dayjs().format("YYYY-MM-DD")
     const returnDateObj = new Date();
 
     const { id } = req.params
@@ -95,23 +95,27 @@ export async function finalizeRental(req, res) {
 
         if (rentalId.rows[0].returnDate !== null) res.status(400).send("aluguel já foi finalizado anteriormente")
 
-        await db.query(`UPDATE rentals set "returnDate"=$1 WHERE id= $2`, [returnDate, id])
-
         let newRentDate = new Date(rentalId.rows[0].rentDate)
 
         let difference = returnDateObj.getTime() - newRentDate.getTime()
+
+        const delayDays = Math.ceil(difference / (1000 * 3600 * 24))
    
         const price = await db.query(`SELECT * FROM games WHERE id=${rentalId.rows[0].gameId}`)
+
+        console.log(price)
   
         const realPrice = (price.rows[0].pricePerDay)/100
 
-        const delayDays = Math.ceil(difference / (1000 * 3600 * 24))
-
         let delayFee = (delayDays - rentalId.rows[0].daysRented) * realPrice
 
-        await db.query(`UPDATE rentals set "returnDate"=$1, delayFee"=$2 WHERE id= $3`, [ returnDate, delayFee, id])
-
-        res.status(200).send("Aluguél finalizado")
+        if (delayFee > 0) {
+            await db.query(`UPDATE rentals set "returnDate"=$1, delayFee"=$2 WHERE id= $3`, [ returnDate, delayFee, id])
+            return res.status(200).send("Aluguél finalizado com taxa de atraso")
+        } else{
+            await db.query(`UPDATE rentals set "returnDate"=$1 WHERE id= $2`, [returnDate, id])
+            return res.status(200).send("Aluguél finalizado sem taxa de atraso")
+        }
     } catch (error) {
         res.status(500).send(error.message)
     }
@@ -127,7 +131,7 @@ export async function deleteRental(req, res) {
 
         if (rentalId.rows.length === 0) return res.sendStatus(404)
 
-        if (rentalId.rows.returnDate !== null) res.status(400).send("aluguel já foi finalizado anteriormente")
+        if (rentalId.rows[0].returnDate === null) res.status(400).send("aluguel não foi finalizado anteriormente")
 
         await db.query(`DELETE from rentals WHERE id=${id}`)
 

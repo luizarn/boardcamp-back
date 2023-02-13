@@ -1,9 +1,6 @@
 import { db } from "../database/database.js"
 import dayjs from "dayjs";
 
-
-
-
 export async function findRentals(req, res) {
 
     try {
@@ -51,7 +48,6 @@ export async function findRentals(req, res) {
 }
 
 
-
 export async function createRental(req, res) {
     const { customerId, gameId, daysRented } = req.body
     let rentDate = dayjs().format()
@@ -83,12 +79,11 @@ export async function createRental(req, res) {
 
     }
 }
-// Rota: POST /rentals/:id/return Finalizar um aluguel
 
 export async function finalizeRental(req, res) {
 
     let returnDate = dayjs().format("YYYY-MM-DD")
-    const returnDateObj = new Date(returnDate);
+    const returnDateObj = new Date();
 
     const { id } = req.params
 
@@ -102,15 +97,19 @@ export async function finalizeRental(req, res) {
 
         await db.query(`UPDATE rentals set "returnDate"=$1 WHERE id= $2`, [returnDate, id])
 
-        let difference = returnDateObj.getTime() - (rentalId.rows[0].rentDate.getTime())
+        let newRentDate = new Date(rentalId.rows[0].rentDate)
+
+        let difference = returnDateObj.getTime() - newRentDate.getTime()
    
         const price = await db.query(`SELECT * FROM games WHERE id=${rentalId.rows[0].gameId}`)
   
         const realPrice = (price.rows[0].pricePerDay)/100
 
-        let delayFee = ((Math.ceil(difference / (1000 * 3600 * 24))) - rentalId.rows[0].daysRented) * realPrice
+        const delayDays = Math.ceil(difference / (1000 * 3600 * 24))
 
-        await db.query(`UPDATE rentals set "delayFee"=$1 WHERE id= $2`, [ delayFee, id])
+        let delayFee = (delayDays - rentalId.rows[0].daysRented) * realPrice
+
+        await db.query(`UPDATE rentals set "returnDate"=$1, delayFee"=$2 WHERE id= $3`, [ returnDate, delayFee, id])
 
         res.status(200).send("Aluguél finalizado")
     } catch (error) {
@@ -119,7 +118,6 @@ export async function finalizeRental(req, res) {
 }
 
 
-// DELETE /rentals/:id Apagar aluguel
 export async function deleteRental(req, res) {
 
     const { id } = req.params

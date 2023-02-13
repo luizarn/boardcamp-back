@@ -21,8 +21,6 @@ export async function createGames(req, res) {
   }
 }
 
-
-
 export async function findGames(req, res) {
 
   try {

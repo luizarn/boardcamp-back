@@ -103,9 +103,7 @@ export async function finalizeRental(req, res) {
    
         const price = await db.query(`SELECT * FROM games WHERE id=${rentalId.rows[0].gameId}`)
 
-        console.log(price)
-  
-        const realPrice = (price.rows[0].pricePerDay)/100
+        const realPrice = (price.rows[0].pricePerDay)
 
         let delayFee = (delayDays - rentalId.rows[0].daysRented) * realPrice
 
